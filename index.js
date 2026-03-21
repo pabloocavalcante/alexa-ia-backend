@@ -9,7 +9,7 @@ app.post("/alexa", async (req, res) => {
         let textoResposta = "";
 
         if (requestType === "LaunchRequest") {
-            textoResposta = "Olá Maíra e Pablo! Sou o assistente Gemini de vocês. O que desejam pesquisar agora?";
+            textoResposta = "Olá Maíra e Pablo! Sou o assistente Gemini. O que desejam pesquisar agora?";
         } 
         else if (requestType === "IntentRequest") {
             const intentName = req.body.request.intent.name;
@@ -18,18 +18,18 @@ app.post("/alexa", async (req, res) => {
                 const pergunta = req.body.request.intent.slots.pergunta?.value;
 
                 if (!pergunta) {
-                    textoResposta = "Não consegui captar a pergunta. Pode repetir?";
+                    textoResposta = "Não consegui entender. Podem repetir?";
                 } else {
-                    // FORÇANDO VERSÃO V1 ESTÁVEL
-                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                    // TENTATIVA COM A VERSÃO MAIS RECENTE DA ESTRUTURA DO GOOGLE
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                     
-                    console.log("Tentando acessar URL:", url.split('?')[0]); // Log de segurança (sem a chave)
-
                     const responseIA = await fetch(url, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: "Responda de forma curta para Pablo ou Maíra: " + pergunta }] }]
+                            contents: [{
+                                parts: [{ text: "Responda de forma curta e natural para Pablo ou Maíra: " + pergunta }]
+                            }]
                         })
                     });
 
@@ -38,8 +38,9 @@ app.post("/alexa", async (req, res) => {
                     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                         textoResposta = data.candidates[0].content.parts[0].text;
                     } else {
-                        console.error("RESPOSTA DO GOOGLE:", JSON.stringify(data));
-                        textoResposta = "O Google retornou um erro de modelo. Verifiquem a chave de API.";
+                        // Se der erro, vamos mostrar o erro real no log do Render
+                        console.error("DEBUG GOOGLE:", JSON.stringify(data));
+                        textoResposta = "Ocorreu um erro na resposta do Google. Verifiquem os logs.";
                     }
                 }
             }
@@ -58,7 +59,7 @@ app.post("/alexa", async (req, res) => {
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão. Tentem de novo." }
+                outputSpeech: { type: "PlainText", text: "Problema de conexão. Tentem de novo." }
             }
         });
     }
