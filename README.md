@@ -1,53 +1,237 @@
-🎙️ Alexa + Google Gemini 3.1 (Integration via Node.js)
-Este projeto integra a Alexa (Amazon Echo) com a Inteligência Artificial Google Gemini 3.1, utilizando um servidor intermediário no Render para processar as requisições e contornar limitações de versões de modelos.
+# 🎙️ Alexa + Google Gemini 3.1 (Node.js Integration)
 
-🚀 O que foi solucionado neste projeto?
-Durante o desenvolvimento, enfrentamos e resolvemos os seguintes desafios técnicos:
+Integração entre Alexa (Amazon Echo) e a IA Google Gemini 3.1 utilizando Node.js como servidor intermediário (Webhook).
 
-1. Desvio de Versões de Modelos (Erro 404)
-As bibliotecas oficiais (@google/generative-ai) muitas vezes forçam o uso de versões de API (v1beta) que podem não estar disponíveis para todas as contas.
+O objetivo do projeto é permitir que comandos de voz feitos na Alexa sejam processados por um modelo de IA moderno e respondidos de forma natural, direta e eficiente.
 
-Solução: Substituímos a biblioteca oficial por chamadas diretas via Fetch Nativo (Node.js 22+). Isso deu controle total sobre a URL de requisição.
+---
 
-2. Transição de Modelos (v1.5 para v3.1)
-Contas novas ou contas com faturamento ativo (Tier 1) podem não ter acesso a modelos antigos como gemini-1.5-flash.
+## 🚀 Funcionalidades
 
-Solução: Implementamos um script de "autodescoberta" para listar os modelos permitidos pela API Key. Identificamos que o modelo estável e performático para 2026 é o gemini-3.1-flash-lite-preview.
+- Integração Alexa → Node.js → Google Gemini
+- Uso de modelo atualizado: `gemini-3.1-flash-lite-preview`
+- Respostas otimizadas para leitura em voz
+- Deploy simples via Render
+- Controle total da API via `fetch` nativo (sem SDK)
 
-3. Conectividade Render + Alexa
-O Render exige que o servidor "acorde" e abra a porta (10000 por padrão) rapidamente, caso contrário, o deploy falha por timeout.
+---
 
-Solução: Otimizamos o index.js para ser leve, sem dependências externas desnecessárias (usando apenas express), garantindo um deploy rápido e estável.
+## 🧠 Problemas Resolvidos
 
-🛠️ Arquitetura do Código
-O servidor funciona como um Webhook:
+### 1. Erro 404 (versão da API)
+As bibliotecas oficiais forçam versões (`v1beta`) que podem não estar disponíveis.
 
-Alexa recebe o comando de voz e envia um JSON para o /alexa.
+**Solução:**  
+Uso de `fetch` nativo → controle total da URL.
 
-O Node.js extrai o valor da slot (pergunta) do usuário.
+---
 
-O servidor faz um POST para a API do Google Gemini usando o modelo 3.1-flash-lite.
+### 2. Mudança de modelos (1.5 → 3.1)
 
-A resposta é tratada para ser curta e direta, ideal para ser lida em voz alta pela Alexa.
+Modelos antigos não disponíveis para novas contas.
 
-📋 Como Replicar
-Google AI Studio: Crie sua API Key e certifique-se de que o faturamento (Billing) está configurado se pretender usar modelos Pro.
+**Solução:**  
+Script de descoberta de modelos + uso do:
+gemini-3.1-flash-lite-preview
 
-Render: * Crie um Web Service conectado ao seu GitHub.
+---
 
-Adicione a variável de ambiente GEMINI_API_KEY.
+### 3. Timeout no Render
 
-No deploy, use Manual Deploy > Clear build cache se encontrar erros de versão.
+Deploy falhava por inicialização lenta.
 
-Alexa Developer Console:
+**Solução:**
+- Código enxuto
+- Apenas `express`
+- Sem dependências pesadas
 
-Crie uma Intent chamada PerguntarGeminniIntent.
+---
 
-Adicione um slot chamado pergunta do tipo AMAZON.SearchQuery.
+## 🛠️ Arquitetura
+Alexa → Webhook (/alexa) → Node.js → Google Gemini API → Resposta → Alexa
 
-Configure o Endpoint para a sua URL do Render.
+---
 
-📝 Exemplo de Requisição (URL Utilizada)
-https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=SUA_CHAVE_AQUI
+## 📦 Instalação
 
-Desenvolvido por Pablo Nunes (2026).
+```bash
+git clone <repo>
+cd projeto
+npm install
+
+🔐 Variáveis de Ambiente
+GEMINI_API_KEY=SuaChaveAqui
+
+▶️ Executar
+npm start
+
+🌐 Deploy (Render)
+	1.	Criar Web Service
+	2.	Conectar ao GitHub
+	3.	Adicionar variável:
+	•	GEMINI_API_KEY
+	4.	Porta: 10000
+	5.	Start command: npm start
+
+
+⸻
+
+🎤 Configuração da Alexa
+	•	Criar Intent: PerguntarGeminiIntent
+	•	Slot:
+		•	Nome: pergunta
+		•	Tipo: AMAZON.SearchQuery
+	•	Endpoint:
+		•	URL do Render (/alexa)
+
+⸻
+
+🔗 Endpoint da API
+https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent
+
+
+⸻
+
+💬 Exemplo de Uso
+
+Usuário:
+Alexa, perguntar ao Gemini: me dê uma receita de bolo
+
+Resposta:
+Receita simples de bolo…
+
+⸻
+
+⚠️ Limitação Atual
+
+O sistema não mantém contexto entre perguntas.
+
+⸻
+
+🚀 Próximos Passos
+	•	Adicionar memória de conversa
+	•	Melhorar naturalidade das respostas
+	•	Suporte a múltiplos usuários
+
+---
+
+# 🧠 **Agora o MAIS IMPORTANTE: Conversa com contexto (tipo ChatGPT)**
+
+Hoje seu sistema **não tem memória**, então cada pergunta é isolada.
+
+👉 Para resolver isso, você precisa guardar o histórico.
+
+---
+
+# ✅ **Solução: manter contexto por sessão**
+
+## 🔥 Ideia simples
+
+Guardar conversa em memória:
+
+```js
+const sessoes = {};
+
+
+⸻
+
+🧠 Exemplo prático
+
+const userId = req.body.session.user.userId;
+
+if (!sessoes[userId]) {
+    sessoes[userId] = [];
+}
+
+// adiciona pergunta
+sessoes[userId].push({ role: "user", text: pergunta });
+
+
+⸻
+
+🔁 Enviar histórico pro Gemini
+
+const contents = sessoes[userId].map(msg => ({
+    role: msg.role,
+    parts: [{ text: msg.text }]
+}));
+
+
+⸻
+
+🔥 Enviar para API
+
+body: JSON.stringify({
+    contents: contents
+})
+
+
+⸻
+
+🧠 Salvar resposta também
+
+sessoes[userId].push({ role: "model", text: textoResposta });
+
+
+⸻
+
+🎯 Resultado
+
+Agora funciona assim:
+
+👤 Pergunta 1:
+
+me dê uma receita de bolo
+
+🤖 Resposta:
+
+receita…
+
+👤 Pergunta 2:
+
+posso trocar cenoura por laranja?
+
+👉 Gemini entende contexto automaticamente
+
+⸻
+
+⚠️ Melhorias importantes
+
+1. Limitar histórico (evitar custo alto)
+
+if (sessoes[userId].length > 10) {
+    sessoes[userId].shift();
+}
+
+
+⸻
+
+2. Limpar sessão após tempo
+
+setTimeout(() => delete sessoes[userId], 1000 * 60 * 10);
+
+
+⸻
+
+3. Melhorar prompt (deixar mais natural)
+
+text: "Responda de forma natural, curta e conversacional: " + pergunta
+
+
+⸻
+
+🚀 Dica avançada (nível produção)
+
+Se quiser algo realmente bom:
+	•	Salvar histórico em:
+	•	Redis (melhor)
+	•	Banco (Mongo / Postgres)
+
+⸻
+
+🏁 Resumo
+
+✔ Seu projeto já está muito bom
+✔ Falta só contexto → isso muda TUDO
+✔ Com isso vira praticamente um ChatGPT via Alexa
+
