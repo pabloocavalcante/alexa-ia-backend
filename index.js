@@ -20,14 +20,14 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui captar a pergunta. Pode repetir?";
                 } else {
-                    // CHAMADA DIRETA USANDO O FETCH NATIVO DO NODE 22 (SEM DEPENDÊNCIAS!)
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                    // MUDANÇA PARA V1 (ESTÁVEL)
+                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                     
                     const responseIA = await fetch(url, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: "Responda de forma curta e natural para Pablo ou Maíra: " + pergunta }] }]
+                            contents: [{ parts: [{ text: "Responda de forma curta para Pablo ou Maíra: " + pergunta }] }]
                         })
                     });
 
@@ -36,8 +36,8 @@ app.post("/alexa", async (req, res) => {
                     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                         textoResposta = data.candidates[0].content.parts[0].text;
                     } else {
-                        console.error("Erro na API do Google:", JSON.stringify(data));
-                        textoResposta = "O Google não conseguiu processar essa pergunta agora.";
+                        console.error("Erro detalhado do Google:", JSON.stringify(data));
+                        textoResposta = "O Google ainda não liberou o acesso a esse modelo. Verifiquem a chave de API.";
                     }
                 }
             }
