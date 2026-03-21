@@ -20,9 +20,11 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui captar a pergunta. Pode repetir?";
                 } else {
-                    // MUDANÇA PARA V1 (ESTÁVEL)
+                    // FORÇANDO VERSÃO V1 ESTÁVEL
                     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                     
+                    console.log("Tentando acessar URL:", url.split('?')[0]); // Log de segurança (sem a chave)
+
                     const responseIA = await fetch(url, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -36,8 +38,8 @@ app.post("/alexa", async (req, res) => {
                     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                         textoResposta = data.candidates[0].content.parts[0].text;
                     } else {
-                        console.error("Erro detalhado do Google:", JSON.stringify(data));
-                        textoResposta = "O Google ainda não liberou o acesso a esse modelo. Verifiquem a chave de API.";
+                        console.error("RESPOSTA DO GOOGLE:", JSON.stringify(data));
+                        textoResposta = "O Google retornou um erro de modelo. Verifiquem a chave de API.";
                     }
                 }
             }
@@ -52,7 +54,7 @@ app.post("/alexa", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erro Geral:", error.message);
+        console.error("ERRO GERAL:", error.message);
         res.json({
             version: "1.0",
             response: {
