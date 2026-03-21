@@ -4,48 +4,62 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
 app.use(express.json());
 
-// Configuração do Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.post("/alexa", async (req, res) => {
     try {
-        // Captura a pergunta vinda da Alexa
-        const pergunta = req.body.request.intent.slots.pergunta.value;
+        const requestType = req.body.request.type;
+        let textoResposta = "";
 
-        // Gera a resposta com o Gemini
-        const result = await model.generateContent([
-            "Responda de forma curta, direta e natural para ser lida em voz alta pela Alexa: ",
-            pergunta
-        ]);
-        
-        const texto = result.response.text();
+        // 1. Se você apenas abrir a Skill sem perguntar nada
+        if (requestType === "LaunchRequest") {
+            textoResposta = "Olá Dra. Maíra! Sou seu assistente Gemini. O que deseja pesquisar hoje?";
+        } 
+        // 2. Se você fizer uma pergunta (Intent)
+        else if (requestType === "IntentRequest") {
+            const intentName = req.body.request.intent.name;
+            
+            if (intentName === "PerguntarGeminniIntent") {
+                const pergunta = req.body.request.intent.slots.pergunta.value;
 
-        // Formato de resposta que a Alexa entende
+                if (!pergunta) {
+                    textoResposta = "Não consegui entender a pergunta. Pode repetir?";
+                } else {
+                    const result = await model.generateContent([
+                        "Responda de forma curta, clara e profissional para ser lida em voz alta: ",
+                        pergunta
+                    ]);
+                    textoResposta = result.response.text();
+                }
+            }
+        }
+
+        // Resposta padrão para a Alexa
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: texto
+                    text: textoResposta || "Estou ouvindo, pode perguntar."
                 },
                 shouldEndSession: false
             }
         });
 
     } catch (error) {
-        console.error("Erro:", error);
+        console.error("Erro interno:", error);
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Desculpe, tive um problema ao consultar o Gemini."
+                    text: "Ocorreu um erro no servidor. Verifique os logs."
                 }
             }
         });
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
