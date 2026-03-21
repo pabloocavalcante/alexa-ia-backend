@@ -20,14 +20,16 @@ app.post("/alexa", async (req, res) => {
         } 
         else if (requestType === "IntentRequest") {
             const intentName = req.body.request.intent.name;
-            
+            console.log("Intent recebida:", intentName); // Ver log no Render
+
             if (intentName === "PerguntarGeminniIntent") {
-                const pergunta = req.body.request.intent.slots.pergunta.value;
+                const pergunta = req.body.request.intent.slots.pergunta?.value;
+                console.log("Pergunta capturada:", pergunta); // Ver log no Render
 
                 if (!pergunta) {
-                    textoResposta = "Não consegui entender a pergunta. Pode repetir?";
+                    // Se ela não capturou a pergunta, ela pergunta de volta
+                    textoResposta = "O que exatamente você gostaria de pesquisar sobre a anatomia do canal?";
                 } else {
-                    // Chamada ao Gemini com tratamento de resposta
                     const result = await model.generateContent([
                         "Responda de forma curta e profissional para a Dra. Maíra: ",
                         pergunta
