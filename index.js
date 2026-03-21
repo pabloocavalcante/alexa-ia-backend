@@ -20,8 +20,8 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui entender. Podem repetir?";
                 } else {
-                    // TENTATIVA COM GEMINI-PRO (MAIOR COMPATIBILIDADE)
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                    // URL PADRÃO GOOGLE V1 (SEM BETA)
+                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                     
                     const responseIA = await fetch(url, {
                         method: "POST",
@@ -38,9 +38,8 @@ app.post("/alexa", async (req, res) => {
                     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                         textoResposta = data.candidates[0].content.parts[0].text;
                     } else {
-                        // Se der erro, vamos mostrar o erro real no log do Render
                         console.error("DEBUG GOOGLE:", JSON.stringify(data));
-                        textoResposta = "Ocorreu um erro na resposta do Google. Verifiquem os logs.";
+                        textoResposta = "O Google ainda está processando sua nova chave. Tente novamente em alguns minutos.";
                     }
                 }
             }
