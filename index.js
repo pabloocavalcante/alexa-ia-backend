@@ -4,13 +4,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
 app.use(express.json());
 
+// Forçando a versão estável da API para evitar o erro 404
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Ajuste do nome do modelo para evitar o erro 404
-const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+}, { apiVersion: 'v1' }); // <--- Isso aqui mata o erro 404
 
 app.post("/alexa", async (req, res) => {
     try {
-        const requestType = req.body.request.type;
+        const requestType = req.body.request?.type;
         let textoResposta = "";
 
         if (requestType === "LaunchRequest") {
@@ -25,12 +27,13 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui entender a pergunta. Pode repetir?";
                 } else {
-                    // Instrução para ser breve na Echo Spot
+                    // Chamada ao Gemini com tratamento de resposta
                     const result = await model.generateContent([
-                        "Responda de forma curta (máximo 3 frases) e profissional para a Dra. Maíra: ",
+                        "Responda de forma curta e profissional para a Dra. Maíra: ",
                         pergunta
                     ]);
-                    textoResposta = result.response.text();
+                    const response = await result.response;
+                    textoResposta = response.text();
                 }
             }
         }
@@ -47,13 +50,13 @@ app.post("/alexa", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erro interno:", error);
+        console.error("Erro detalhado:", error);
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Ocorreu um erro ao acessar o Gemini. Tente novamente em instantes."
+                    text: "Tive um problema de conexão com o Google. Tente novamente em alguns segundos."
                 }
             }
         });
