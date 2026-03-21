@@ -20,8 +20,8 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui entender. Podem repetir?";
                 } else {
-                    // TENTATIVA COM A VERSÃO MAIS RECENTE DA ESTRUTURA DO GOOGLE
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                    // TENTATIVA COM GEMINI-PRO (MAIOR COMPATIBILIDADE)
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
                     
                     const responseIA = await fetch(url, {
                         method: "POST",
