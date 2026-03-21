@@ -5,18 +5,17 @@ const app = express();
 app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Ajuste do nome do modelo para evitar o erro 404
+const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
 
 app.post("/alexa", async (req, res) => {
     try {
         const requestType = req.body.request.type;
         let textoResposta = "";
 
-        // 1. Se você apenas abrir a Skill sem perguntar nada
         if (requestType === "LaunchRequest") {
             textoResposta = "Olá Dra. Maíra! Sou seu assistente Gemini. O que deseja pesquisar hoje?";
         } 
-        // 2. Se você fizer uma pergunta (Intent)
         else if (requestType === "IntentRequest") {
             const intentName = req.body.request.intent.name;
             
@@ -26,8 +25,9 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui entender a pergunta. Pode repetir?";
                 } else {
+                    // Instrução para ser breve na Echo Spot
                     const result = await model.generateContent([
-                        "Responda de forma curta, clara e profissional para ser lida em voz alta: ",
+                        "Responda de forma curta (máximo 3 frases) e profissional para a Dra. Maíra: ",
                         pergunta
                     ]);
                     textoResposta = result.response.text();
@@ -35,7 +35,6 @@ app.post("/alexa", async (req, res) => {
             }
         }
 
-        // Resposta padrão para a Alexa
         res.json({
             version: "1.0",
             response: {
@@ -54,7 +53,7 @@ app.post("/alexa", async (req, res) => {
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Ocorreu um erro no servidor. Verifique os logs."
+                    text: "Ocorreu um erro ao acessar o Gemini. Tente novamente em instantes."
                 }
             }
         });
