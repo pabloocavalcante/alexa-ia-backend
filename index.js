@@ -1,5 +1,4 @@
 import express from "express";
-import fetch from "node-fetch";
 
 const app = express();
 app.use(express.json());
@@ -21,24 +20,24 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui captar a pergunta. Pode repetir?";
                 } else {
-                    // CHAMADA DIRETA PARA A API DO GOOGLE (SEM BIBLIOTECA)
+                    // CHAMADA DIRETA USANDO O FETCH NATIVO DO NODE 22 (SEM DEPENDÊNCIAS!)
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                     
                     const responseIA = await fetch(url, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: "Responda de forma curta para Pablo ou Maíra: " + pergunta }] }]
+                            contents: [{ parts: [{ text: "Responda de forma curta e natural para Pablo ou Maíra: " + pergunta }] }]
                         })
                     });
 
                     const data = await responseIA.json();
                     
-                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                         textoResposta = data.candidates[0].content.parts[0].text;
                     } else {
-                        console.error("Erro na estrutura do Google:", data);
-                        textoResposta = "O Google recebeu a pergunta, mas não conseguiu gerar uma resposta agora.";
+                        console.error("Erro na API do Google:", JSON.stringify(data));
+                        textoResposta = "O Google não conseguiu processar essa pergunta agora.";
                     }
                 }
             }
@@ -57,7 +56,7 @@ app.post("/alexa", async (req, res) => {
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão. Tentem de novo em 10 segundos." }
+                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão. Tentem de novo." }
             }
         });
     }
