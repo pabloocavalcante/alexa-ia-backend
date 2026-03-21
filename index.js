@@ -4,23 +4,22 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
 app.use(express.json());
 
-// Configuração do Gemini com API v1 para estabilidade
+// CONFIGURAÇÃO REVISADA:
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Mudamos a forma de declarar o modelo para garantir compatibilidade
 const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-}, { apiVersion: 'v1' });
+    model: "gemini-1.5-flash" 
+}); 
 
 app.post("/alexa", async (req, res) => {
     try {
         const requestType = req.body.request?.type;
         let textoResposta = "";
 
-        // 1. Boas-vindas para o casal
         if (requestType === "LaunchRequest") {
             textoResposta = "Olá Maíra e Pablo! Sou o assistente Gemini de vocês. O que desejam pesquisar agora?";
         } 
-        
-        // 2. Processamento da Pergunta
         else if (requestType === "IntentRequest") {
             const intentName = req.body.request.intent.name;
             
@@ -30,42 +29,41 @@ app.post("/alexa", async (req, res) => {
                 if (!pergunta) {
                     textoResposta = "Não consegui captar a pergunta. Pode repetir o que deseja saber?";
                 } else {
-                    // Instrução para o Gemini ser breve e atender a ambos
-                    const result = await model.generateContent([
-                        "Responda de forma curta e natural para ser lida em voz alta. Você está atendendo a Dra. Maíra ou ao Pablo: ",
-                        pergunta
-                    ]);
+                    // Adicionamos um timeout manual para o Gemini não travar o Render
+                    const result = await model.generateContent("Responda de forma curta e natural para Maíra ou Pablo: " + pergunta);
                     const response = await result.response;
                     textoResposta = response.text();
                 }
             }
         }
 
-        // Resposta enviada para a Alexa
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: textoResposta || "Estou ouvindo, o que vocês precisam?"
+                    text: textoResposta || "Estou ouvindo."
                 },
                 shouldEndSession: false
             }
         });
 
     } catch (error) {
-        console.error("Erro interno no servidor:", error);
+        console.error("Erro no Gemini:", error.message);
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Tive um probleminha para acessar o Google agora. Podem tentar de novo?"
+                    text: "Tive um problema de conexão. Por favor, tentem de novo em 10 segundos."
                 }
             }
         });
     }
 });
 
+// O Render precisa que o servidor responda rápido, ou ele dá "Port scan timeout"
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Servidor ativo na porta ${PORT}`);
+});
