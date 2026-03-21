@@ -8,24 +8,26 @@ app.post("/alexa", async (req, res) => {
         const requestType = req.body.request?.type;
         let textoResposta = "";
 
+        // 1. Boas-vindas neutras
         if (requestType === "LaunchRequest") {
-            textoResposta = "Olá Maíra e Pablo! O Gemini está pronto. O que desejam saber?";
+            textoResposta = "Olá! O Gemini está ativo. O que deseja saber?";
         } 
+        // 2. Processamento da Pergunta
         else if (requestType === "IntentRequest") {
             const intent = req.body.request.intent;
             const pergunta = intent?.slots?.pergunta?.value;
 
             if (!pergunta) {
-                textoResposta = "Não entendi a pergunta. Podem repetir?";
+                textoResposta = "Estou ouvindo. O que você gostaria de pesquisar?";
             } else {
-                // MODELO GEMINI 3.1 FLASH LITE (O MAIS NOVO DA SUA LISTA)
+                // MODELO 3.1 FLASH LITE (O QUE FUNCIONOU)
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 
                 const responseIA = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: "Responda de forma curta e natural para Pablo ou Dra. Maíra: " + pergunta }] }]
+                        contents: [{ parts: [{ text: "Responda de forma direta, clara e curta, sem citar nomes: " + pergunta }] }]
                     })
                 });
 
@@ -34,26 +36,25 @@ app.post("/alexa", async (req, res) => {
                 if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                     textoResposta = data.candidates[0].content.parts[0].text;
                 } else {
-                    console.error("DEBUG GOOGLE:", JSON.stringify(data));
-                    textoResposta = "O Google retornou um erro na geração da resposta 3.1.";
+                    textoResposta = "Desculpe, tive um problema ao processar essa resposta.";
                 }
             }
         }
 
+        // Resposta para Alexa
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: textoResposta || "Como posso ajudar?" },
-                shouldEndSession: false
+                outputSpeech: { type: "PlainText", text: textoResposta },
+                shouldEndSession: false // Mantém aberto para você continuar perguntando
             }
         });
 
     } catch (error) {
-        console.error("ERRO GERAL:", error.message);
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão agora." }
+                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão." }
             }
         });
     }
