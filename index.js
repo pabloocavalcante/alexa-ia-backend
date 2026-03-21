@@ -8,61 +8,53 @@ app.post("/alexa", async (req, res) => {
         const requestType = req.body.request?.type;
         let textoResposta = "";
 
-        // 1. Boas-vindas
         if (requestType === "LaunchRequest") {
-            textoResposta = "Olá Maíra e Pablo! O Gemini está ativo. O que desejam saber?";
+            textoResposta = "Olá Maíra e Pablo! O Gemini está pronto. O que desejam saber?";
         } 
-        // 2. Processamento da Pergunta (Intent)
         else if (requestType === "IntentRequest") {
             const intent = req.body.request.intent;
             
-            // Verificação de segurança para não dar erro de 'undefined'
-            if (intent && intent.slots && intent.slots.pergunta) {
+            if (intent && intent.slots && intent.slots.pergunta && intent.slots.pergunta.value) {
                 const pergunta = intent.slots.pergunta.value;
+                
+                // URL DE ALTA COMPATIBILIDADE PARA CONTAS PAGAS
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                
+                const responseIA = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: "Responda de forma curta e natural para Pablo ou Dra. Maíra: " + pergunta }] }]
+                    })
+                });
 
-                if (!pergunta) {
-                    textoResposta = "Não consegui captar a pergunta. Podem repetir?";
+                const data = await responseIA.json();
+                
+                if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+                    textoResposta = data.candidates[0].content.parts[0].text;
                 } else {
-                    // URL PARA CONTA PAGA (v1 Estável)
-                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-                    
-                    const responseIA = await fetch(url, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: "Responda de forma curta para Pablo ou Maíra: " + pergunta }] }]
-                        })
-                    });
-
-                    const data = await responseIA.json();
-                    
-                    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-                        textoResposta = data.candidates[0].content.parts[0].text;
-                    } else {
-                        console.error("DEBUG GOOGLE:", JSON.stringify(data));
-                        textoResposta = "O Google encontrou um erro técnico. Verifiquem o log do Render.";
-                    }
+                    console.error("DEBUG GOOGLE PAGO:", JSON.stringify(data));
+                    textoResposta = "O Google retornou um erro de processamento na conta paga.";
                 }
             } else {
-                textoResposta = "Estou ouvindo, mas não entendi a pergunta.";
+                textoResposta = "Estou ouvindo. Qual a sua pergunta?";
             }
         }
 
-        // Resposta padrão Alexa
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: textoResposta || "Estou à disposição." },
+                outputSpeech: { type: "PlainText", text: textoResposta || "Como posso ajudar?" },
                 shouldEndSession: false
             }
         });
 
     } catch (error) {
-        console.error("ERRO GERAL NO SERVIDOR:", error);
+        console.error("ERRO GERAL:", error);
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: "Tive um problema de processamento interno. Tentem de novo." }
+                outputSpeech: { type: "PlainText", text: "Erro interno de conexão. Tente novamente." }
             }
         });
     }
