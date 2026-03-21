@@ -9,7 +9,7 @@ app.post("/alexa", async (req, res) => {
         let textoResposta = "";
 
         if (requestType === "LaunchRequest") {
-            textoResposta = "Olá Maíra e Pablo! O Gemini profissional está ativo. O que desejam saber?";
+            textoResposta = "Olá Maíra e Pablo! O sistema Gemini 2.0 está ativo. O que desejam saber?";
         } 
         else if (requestType === "IntentRequest") {
             const intent = req.body.request.intent;
@@ -18,23 +18,14 @@ app.post("/alexa", async (req, res) => {
             if (!pergunta) {
                 textoResposta = "Não entendi a pergunta. Podem repetir?";
             } else {
-                // TENTATIVA DE LISTAR OS MODELOS PARA DESCOBRIR O NOME CORRETO
-                const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`;
-                const listResponse = await fetch(listUrl);
-                const listData = await listResponse.json();
+                // URL COM O MODELO 2.0 FLASH (CONFIRMADO NA SUA LISTA)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 
-                // Imprime a lista de modelos permitidos no log do Render
-                console.log("--- MODELOS PERMITIDOS NA SUA CHAVE ---");
-                console.log(JSON.stringify(listData));
-                console.log("---------------------------------------");
-
-                // Tentativa de chamada padrão
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 const responseIA = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: "Responda de forma curta para Pablo ou Maíra: " + pergunta }] }]
+                        contents: [{ parts: [{ text: "Responda de forma curta e natural para Pablo ou Dra. Maíra: " + pergunta }] }]
                     })
                 });
 
@@ -43,8 +34,8 @@ app.post("/alexa", async (req, res) => {
                 if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                     textoResposta = data.candidates[0].content.parts[0].text;
                 } else {
-                    console.error("ERRO DO GOOGLE:", JSON.stringify(data));
-                    textoResposta = "O Google deu erro de modelo. Por favor, me mande o log do Render com a lista de modelos.";
+                    console.error("ERRO GOOGLE:", JSON.stringify(data));
+                    textoResposta = "Ocorreu um erro na geração da resposta pelo Google.";
                 }
             }
         }
@@ -52,7 +43,7 @@ app.post("/alexa", async (req, res) => {
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: textoResposta || "Estou ouvindo." },
+                outputSpeech: { type: "PlainText", text: textoResposta || "Como posso ajudar?" },
                 shouldEndSession: false
             }
         });
@@ -62,7 +53,7 @@ app.post("/alexa", async (req, res) => {
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "PlainText", text: "Erro de conexão. Tentem de novo." }
+                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão agora." }
             }
         });
     }
