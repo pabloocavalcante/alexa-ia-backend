@@ -1,10 +1,10 @@
 {
-  "name": "alexa-ia",
+  "name": "alexa-gemini-backend",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
     "express": "^4.18.2",
-    "node-fetch": "^3.3.2"
+    "@google/generative-ai": "^0.21.0"
   },
   "scripts": {
     "start": "node index.js"
