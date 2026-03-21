@@ -1,16 +1,8 @@
 import express from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import fetch from "node-fetch";
 
 const app = express();
 app.use(express.json());
-
-// CONFIGURAÇÃO REVISADA:
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Mudamos a forma de declarar o modelo para garantir compatibilidade
-const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash" 
-}); 
 
 app.post("/alexa", async (req, res) => {
     try {
@@ -27,12 +19,27 @@ app.post("/alexa", async (req, res) => {
                 const pergunta = req.body.request.intent.slots.pergunta?.value;
 
                 if (!pergunta) {
-                    textoResposta = "Não consegui captar a pergunta. Pode repetir o que deseja saber?";
+                    textoResposta = "Não consegui captar a pergunta. Pode repetir?";
                 } else {
-                    // Adicionamos um timeout manual para o Gemini não travar o Render
-                    const result = await model.generateContent("Responda de forma curta e natural para Maíra ou Pablo: " + pergunta);
-                    const response = await result.response;
-                    textoResposta = response.text();
+                    // CHAMADA DIRETA PARA A API DO GOOGLE (SEM BIBLIOTECA)
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                    
+                    const responseIA = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: "Responda de forma curta para Pablo ou Maíra: " + pergunta }] }]
+                        })
+                    });
+
+                    const data = await responseIA.json();
+                    
+                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                        textoResposta = data.candidates[0].content.parts[0].text;
+                    } else {
+                        console.error("Erro na estrutura do Google:", data);
+                        textoResposta = "O Google recebeu a pergunta, mas não conseguiu gerar uma resposta agora.";
+                    }
                 }
             }
         }
@@ -40,30 +47,21 @@ app.post("/alexa", async (req, res) => {
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: {
-                    type: "PlainText",
-                    text: textoResposta || "Estou ouvindo."
-                },
+                outputSpeech: { type: "PlainText", text: textoResposta || "Estou ouvindo." },
                 shouldEndSession: false
             }
         });
 
     } catch (error) {
-        console.error("Erro no Gemini:", error.message);
+        console.error("Erro Geral:", error.message);
         res.json({
             version: "1.0",
             response: {
-                outputSpeech: {
-                    type: "PlainText",
-                    text: "Tive um problema de conexão. Por favor, tentem de novo em 10 segundos."
-                }
+                outputSpeech: { type: "PlainText", text: "Tive um problema de conexão. Tentem de novo em 10 segundos." }
             }
         });
     }
 });
 
-// O Render precisa que o servidor responda rápido, ou ele dá "Port scan timeout"
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Servidor ativo na porta ${PORT}`);
-});
+app.listen(PORT, "0.0.0.0", () => console.log(`Servidor ativo na porta ${PORT}`));
