@@ -9,7 +9,7 @@ app.post("/alexa", async (req, res) => {
         let textoResposta = "";
 
         if (requestType === "LaunchRequest") {
-            textoResposta = "Olá Maíra e Pablo! O sistema Gemini 2.0 está ativo. O que desejam saber?";
+            textoResposta = "Olá Maíra e Pablo! O Gemini está pronto. O que desejam saber?";
         } 
         else if (requestType === "IntentRequest") {
             const intent = req.body.request.intent;
@@ -18,8 +18,8 @@ app.post("/alexa", async (req, res) => {
             if (!pergunta) {
                 textoResposta = "Não entendi a pergunta. Podem repetir?";
             } else {
-                // URL COM O MODELO 2.0 FLASH (CONFIRMADO NA SUA LISTA)
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                // MODELO GEMINI 3.1 FLASH LITE (O MAIS NOVO DA SUA LISTA)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 
                 const responseIA = await fetch(url, {
                     method: "POST",
@@ -34,8 +34,8 @@ app.post("/alexa", async (req, res) => {
                 if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                     textoResposta = data.candidates[0].content.parts[0].text;
                 } else {
-                    console.error("ERRO GOOGLE:", JSON.stringify(data));
-                    textoResposta = "Ocorreu um erro na geração da resposta pelo Google.";
+                    console.error("DEBUG GOOGLE:", JSON.stringify(data));
+                    textoResposta = "O Google retornou um erro na geração da resposta 3.1.";
                 }
             }
         }
