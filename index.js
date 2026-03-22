@@ -73,7 +73,7 @@ app.post("/alexa", async (req, res) => {
                 }
 
                 // 🕒 Data e hora atual (ANTI-ALUCINAÇÃO)
-                cconst agora = new Date();
+                const agora = new Date();
 
                 const dataAtual = agora.toLocaleDateString("pt-BR", {
                     timeZone: "America/Sao_Paulo",
