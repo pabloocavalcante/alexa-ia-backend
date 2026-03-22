@@ -45,18 +45,13 @@ app.post("/alexa", async (req, res) => {
         // 💬 Conversa livre
         else if (requestType === "IntentRequest") {
 
-            // 🔥 CAPTURA REAL DA FALA (ESSENCIAL)
+            // 🔥 Captura robusta da fala
             let pergunta =
                 req.body.request?.intent?.slots?.pergunta?.value ||
                 req.body.request?.inputTranscript ||
                 null;
 
-            // fallback (caso não venha inputTranscript)
-            if (!pergunta) {
-                pergunta = req.body.request?.intent?.slots?.pergunta?.value;
-            }
-
-            // fallback final
+            // fallback extra
             if (!pergunta || intentName === "AMAZON.FallbackIntent") {
                 pergunta = req.body.request?.inputTranscript;
             }
@@ -77,12 +72,32 @@ app.post("/alexa", async (req, res) => {
                     sessoes[userId].shift();
                 }
 
+                // 🕒 Data e hora atual (ANTI-ALUCINAÇÃO)
+                const agora = new Date();
+
+                const dataAtual = agora.toLocaleDateString("pt-BR", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                });
+
+                const horaAtual = agora.toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                });
+
                 // 🧠 Monta contexto
                 const contents = [
                     {
                         role: "user",
                         parts: [{
-                            text: "Você é um assistente estilo Jarvis: descontraído, inteligente, direto, levemente sarcástico e com respostas curtas ideais para voz."
+                            text: `Você é um assistente estilo Jarvis: descontraído, inteligente, direto, levemente sarcástico e com respostas curtas ideais para voz.
+
+Hoje é ${dataAtual}.
+Agora são ${horaAtual}.
+
+Sempre responda considerando essas informações como verdade absoluta.`
                         }]
                     },
                     ...sessoes[userId].map(msg => ({
@@ -91,7 +106,7 @@ app.post("/alexa", async (req, res) => {
                     }))
                 ];
 
-                // 🔗 URL (mantida exatamente como você pediu)
+                // 🔗 URL do Gemini (mantida como você pediu)
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 const responseIA = await fetch(url, {
@@ -125,7 +140,7 @@ app.post("/alexa", async (req, res) => {
                     type: "PlainText",
                     text: textoResposta
                 },
-                shouldEndSession: false // 🔥 mantém conversa aberta
+                shouldEndSession: false
             }
         });
 
