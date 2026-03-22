@@ -16,6 +16,7 @@ app.get('/health', (req, res) => {
 app.post('/alexa', async (req, res) => {
   const body = req.body;
   console.log('REQUEST TYPE:', body?.request?.type);
+  console.log('INTENT NAME:', body?.request?.intent?.name);  // ← adiciona essa
   console.log('SLOTS:', JSON.stringify(body?.request?.intent?.slots));
 
   const alexaRequest = body?.request;
