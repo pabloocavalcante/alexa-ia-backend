@@ -1,24 +1,37 @@
 const express = require('express');
+const alexaVerifier = require('alexa-verifier-middleware');
+
 const app = express();
-app.use(express.json());
+
+const ALEXA_APP_ID = process.env.ALEXA_APP_ID || 'amzn1.ask.skill.781b1af0-0b1a-4211-bf18-c63dce548f7d';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent';
 
 const conversationHistory = {};
 const SESSION_TIMEOUT = 10 * 60 * 1000;
 const MAX_HISTORY = 10;
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-//const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent';
-
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.post('/alexa', async (req, res) => {
+// Rota /alexa com verificação de assinatura da Amazon
+const alexaRouter = express.Router();
+alexaRouter.use(alexaVerifier); // deve vir antes do express.json()
+alexaRouter.use(express.json());
+
+alexaRouter.post('/', async (req, res) => {
   const body = req.body;
   console.log('REQUEST TYPE:', body?.request?.type);
   console.log('INTENT NAME:', body?.request?.intent?.name);
   console.log('SLOTS:', JSON.stringify(body?.request?.intent?.slots));
+
+  // Verifica se o request veio da sua skill
+  const appId = body?.session?.application?.applicationId;
+  if (appId !== ALEXA_APP_ID) {
+    console.warn('Unauthorized applicationId:', appId);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   const alexaRequest = body?.request;
   const sessionId = body?.session?.sessionId || 'default';
@@ -142,6 +155,8 @@ Otimize suas respostas para saída de voz.`;
     });
   }
 });
+
+app.use('/alexa', alexaRouter);
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
