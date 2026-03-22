@@ -6,12 +6,15 @@ app.use(express.json());
 // 🧠 Memória por usuário
 const sessoes = {};
 
-const MAX_HISTORY = 10;
+// ⏱ Tempo de vida da sessão (10 minutos)
 const SESSION_TIMEOUT = 1000 * 60 * 10;
+
+// 📏 Limite de histórico
+const MAX_HISTORY = 10;
 
 app.post("/alexa", async (req, res) => {
     try {
-        console.log(JSON.stringify(req.body, null, 2));
+        console.log("REQUEST:", JSON.stringify(req.body, null, 2));
 
         const requestType = req.body.request?.type;
         const intentName = req.body.request?.intent?.name;
@@ -19,52 +22,49 @@ app.post("/alexa", async (req, res) => {
 
         let textoResposta = "";
 
-        // 🧠 inicia sessão
+        // 🧠 Inicializa sessão
         if (!sessoes[userId]) {
             sessoes[userId] = [];
         }
 
-        // ⏱ reset timeout
+        // ⏱ Reset timeout
         if (sessoes[userId]._timeout) {
             clearTimeout(sessoes[userId]._timeout);
         }
 
         sessoes[userId]._timeout = setTimeout(() => {
             delete sessoes[userId];
+            console.log(`Sessão ${userId} removida`);
         }, SESSION_TIMEOUT);
 
-        // 🚀 ABERTURA (LaunchRequest)
+        // 🎙️ Abertura estilo Jarvis
         if (requestType === "LaunchRequest") {
             textoResposta = "Olá... sistema online. Pode falar comigo.";
-
-            return res.json({
-                version: "1.0",
-                response: {
-                    outputSpeech: { type: "PlainText", text: textoResposta },
-                    shouldEndSession: false
-                }
-            });
         }
 
-        // 💬 CAPTURA LIVRE (Fallback ou Intent)
-        if (requestType === "IntentRequest") {
+        // 💬 Conversa livre
+        else if (requestType === "IntentRequest") {
 
-            // 🔥 tenta capturar qualquer coisa que o usuário falou
-            let pergunta =
-                req.body.request?.intent?.slots?.pergunta?.value ||
-                req.body.request?.inputTranscript || // alguns casos
-                null;
+            // 🔥 CAPTURA REAL DA FALA (ESSENCIAL)
+            let pergunta = req.body.request?.inputTranscript;
 
-            // 🔥 fallback TOTAL (pega texto bruto da requisição)
+            // fallback (caso não venha inputTranscript)
             if (!pergunta) {
-                pergunta = req.body.request?.intent?.name;
+                pergunta = req.body.request?.intent?.slots?.pergunta?.value;
             }
 
-            if (!pergunta || pergunta === "AMAZON.FallbackIntent") {
+            // fallback final
+            if (!pergunta || intentName === "AMAZON.FallbackIntent") {
+                pergunta = req.body.request?.inputTranscript;
+            }
+
+            console.log("FALA CAPTURADA:", pergunta);
+
+            if (!pergunta) {
                 textoResposta = "Pode falar, estou ouvindo.";
             } else {
 
-                // 🧠 salva pergunta
+                // 🧠 Salva pergunta
                 sessoes[userId].push({
                     role: "user",
                     text: pergunta
@@ -74,20 +74,21 @@ app.post("/alexa", async (req, res) => {
                     sessoes[userId].shift();
                 }
 
-                // 🧠 contexto
-                const contents = sessoes[userId].map(msg => ({
-                    role: msg.role,
-                    parts: [{ text: msg.text }]
-                }));
+                // 🧠 Monta contexto
+                const contents = [
+                    {
+                        role: "user",
+                        parts: [{
+                            text: "Você é um assistente estilo Jarvis: descontraído, inteligente, direto, levemente sarcástico e com respostas curtas ideais para voz."
+                        }]
+                    },
+                    ...sessoes[userId].map(msg => ({
+                        role: msg.role,
+                        parts: [{ text: msg.text }]
+                    }))
+                ];
 
-                // 🤖 personalidade Jarvis
-                contents.unshift({
-                    role: "user",
-                    parts: [{
-                        text: "Você é um assistente estilo Jarvis, descontraído, inteligente e direto. Responda de forma curta, natural e conversacional."
-                    }]
-                });
-
+                // 🔗 URL (mantida exatamente como você pediu)
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 const responseIA = await fetch(url, {
@@ -101,17 +102,19 @@ app.post("/alexa", async (req, res) => {
                 if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                     textoResposta = data.candidates[0].content.parts[0].text;
 
+                    // 🧠 salva resposta
                     sessoes[userId].push({
                         role: "model",
                         text: textoResposta
                     });
 
                 } else {
-                    textoResposta = "Hmm... não consegui processar isso agora.";
+                    textoResposta = "Hmm... não consegui pensar em uma resposta agora.";
                 }
             }
         }
 
+        // 📤 resposta Alexa
         res.json({
             version: "1.0",
             response: {
@@ -140,4 +143,7 @@ app.post("/alexa", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, "0.0.0.0", () => console.log(`Servidor ativo na porta ${PORT}`));
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Servidor ativo na porta ${PORT}`);
+});
