@@ -2,7 +2,8 @@
   "name": "alexa-gemini-backend",
   "version": "1.0.0",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "alexa-verifier-middleware": "^1.0.3"
   },
   "scripts": {
     "start": "node index.js"
