@@ -1,237 +1,137 @@
-# 🎙️ Alexa + Google Gemini 3.1 (Node.js Integration)
+🎙️ Alexa + Google Gemini (Modo Assistente / Jarvis)
 
-Integração entre Alexa (Amazon Echo) e a IA Google Gemini 3.1 utilizando Node.js como servidor intermediário (Webhook).
+🚀 Objetivo
 
-O objetivo do projeto é permitir que comandos de voz feitos na Alexa sejam processados por um modelo de IA moderno e respondidos de forma natural, direta e eficiente.
+Transformar a Alexa em um assistente inteligente (tipo ChatGPT/Jarvis), com:
+	•	Conversa contínua
+	•	Memória de contexto
+	•	Respostas naturais via Google Gemini
 
----
+⸻
 
-## 🚀 Funcionalidades
+🧠 Como funciona
+	1.	Alexa recebe sua fala
+	2.	Envia para um servidor Node.js (/alexa)
+	3.	O servidor chama o Gemini (API)
+	4.	A resposta volta e é lida pela Alexa
 
-- Integração Alexa → Node.js → Google Gemini
-- Uso de modelo atualizado: `gemini-3.1-flash-lite-preview`
-- Respostas otimizadas para leitura em voz
-- Deploy simples via Render
-- Controle total da API via `fetch` nativo (sem SDK)
+⸻
 
----
+⚙️ Configuração da Alexa
 
-## 🧠 Problemas Resolvidos
+Invocation Name
 
-### 1. Erro 404 (versão da API)
-As bibliotecas oficiais forçam versões (`v1beta`) que podem não estar disponíveis.
-
-**Solução:**  
-Uso de `fetch` nativo → controle total da URL.
-
----
-
-### 2. Mudança de modelos (1.5 → 3.1)
-
-Modelos antigos não disponíveis para novas contas.
-
-**Solução:**  
-Script de descoberta de modelos + uso do:
-gemini-3.1-flash-lite-preview
-
----
-
-### 3. Timeout no Render
-
-Deploy falhava por inicialização lenta.
-
-**Solução:**
-- Código enxuto
-- Apenas `express`
-- Sem dependências pesadas
-
----
-
-## 🛠️ Arquitetura
-Alexa → Webhook (/alexa) → Node.js → Google Gemini API → Resposta → Alexa
-
----
-
-## 📦 Instalação
-
-```bash
-git clone <repo>
-cd projeto
-npm install
-
-🔐 Variáveis de Ambiente
-GEMINI_API_KEY=SuaChaveAqui
-
-▶️ Executar
-npm start
-
-🌐 Deploy (Render)
-	1.	Criar Web Service
-	2.	Conectar ao GitHub
-	3.	Adicionar variável:
-	•	GEMINI_API_KEY
-	4.	Porta: 10000
-	5.	Start command: npm start
+meu assistente
 
 
 ⸻
 
-🎤 Configuração da Alexa
-	•	Criar Intent: PerguntarGeminiIntent
-	•	Slot:
-		•	Nome: pergunta
-		•	Tipo: AMAZON.SearchQuery
-	•	Endpoint:
-		•	URL do Render (/alexa)
+Intent obrigatória (captura de fala)
+
+Nome:
+
+ConversaLivreIntent
+
+Sample Utterances:
+
+falar {pergunta}
+dizer {pergunta}
+perguntar {pergunta}
+me diga {pergunta}
+quero saber {pergunta}
+
+Slot:
+	•	Nome: pergunta
+	•	Tipo: AMAZON.SearchQuery
 
 ⸻
 
-🔗 Endpoint da API
+Intent adicional (importante)
+
+Ativar:
+
+AMAZON.FallbackIntent
+
+👉 Não precisa configurar nada nela
+
+⸻
+
+💻 Backend (Node.js)
+	•	Framework: Express
+	•	Endpoint: /alexa
+	•	Porta: 10000 (Render)
+
+Variável de ambiente:
+
+GEMINI_API_KEY= SUA_CHAVE
+
+
+⸻
+
+🔗 API utilizada
+
 https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent
 
 
 ⸻
 
-💬 Exemplo de Uso
-
-Usuário:
-Alexa, perguntar ao Gemini: me dê uma receita de bolo
-
-Resposta:
-Receita simples de bolo…
+🧠 Recursos implementados
+	•	Memória por usuário (contexto)
+	•	Timeout de sessão (10 min)
+	•	Histórico limitado (10 mensagens)
+	•	Personalidade estilo “Jarvis”
 
 ⸻
 
-⚠️ Limitação Atual
+🎤 Como usar
 
-O sistema não mantém contexto entre perguntas.
+Ativação:
 
-⸻
+Alexa, meu assistente
 
-🚀 Próximos Passos
-	•	Adicionar memória de conversa
-	•	Melhorar naturalidade das respostas
-	•	Suporte a múltiplos usuários
+Perguntas:
 
----
-
-# 🧠 **Agora o MAIS IMPORTANTE: Conversa com contexto (tipo ChatGPT)**
-
-Hoje seu sistema **não tem memória**, então cada pergunta é isolada.
-
-👉 Para resolver isso, você precisa guardar o histórico.
-
----
-
-# ✅ **Solução: manter contexto por sessão**
-
-## 🔥 Ideia simples
-
-Guardar conversa em memória:
-
-```js
-const sessoes = {};
+Alexa, meu assistente, falar tem jogo hoje?
+Alexa, meu assistente, me diga uma receita
 
 
 ⸻
 
-🧠 Exemplo prático
-
-const userId = req.body.session.user.userId;
-
-if (!sessoes[userId]) {
-    sessoes[userId] = [];
-}
-
-// adiciona pergunta
-sessoes[userId].push({ role: "user", text: pergunta });
-
+⚠️ Importante
+	•	Alexa NÃO aceita fala 100% livre
+	•	Sempre precisa de uma frase como:
+	•	“falar”
+	•	“me diga”
+	•	Isso é limitação da própria Alexa
 
 ⸻
 
-🔁 Enviar histórico pro Gemini
+🏁 Resultado
 
-const contents = sessoes[userId].map(msg => ({
-    role: msg.role,
-    parts: [{ text: msg.text }]
-}));
-
-
-⸻
-
-🔥 Enviar para API
-
-body: JSON.stringify({
-    contents: contents
-})
-
+✔ Conversa contínua
+✔ Respostas inteligentes
+✔ Contexto entre perguntas
+✔ Experiência tipo ChatGPT
 
 ⸻
 
-🧠 Salvar resposta também
-
-sessoes[userId].push({ role: "model", text: textoResposta });
-
-
-⸻
-
-🎯 Resultado
-
-Agora funciona assim:
-
-👤 Pergunta 1:
-
-me dê uma receita de bolo
-
-🤖 Resposta:
-
-receita…
-
-👤 Pergunta 2:
-
-posso trocar cenoura por laranja?
-
-👉 Gemini entende contexto automaticamente
+🚀 Melhorias futuras
+	•	SSML (voz mais natural)
+	•	Memória persistente (banco)
+	•	Integração com APIs externas
+	•	Personalização por usuário
 
 ⸻
 
-⚠️ Melhorias importantes
+📦 Deploy
 
-1. Limitar histórico (evitar custo alto)
-
-if (sessoes[userId].length > 10) {
-    sessoes[userId].shift();
-}
-
+Recomendado:
+	•	Render (Web Service)
+	•	Node.js 22+
+	•	Deploy leve (apenas express)
 
 ⸻
 
-2. Limpar sessão após tempo
-
-setTimeout(() => delete sessoes[userId], 1000 * 60 * 10);
-
-
-⸻
-
-3. Melhorar prompt (deixar mais natural)
-
-text: "Responda de forma natural, curta e conversacional: " + pergunta
-
-
-⸻
-
-🚀 Dica avançada (nível produção)
-
-Se quiser algo realmente bom:
-	•	Salvar histórico em:
-	•	Redis (melhor)
-	•	Banco (Mongo / Postgres)
-
-⸻
-
-🏁 Resumo
-
-✔ Seu projeto já está muito bom
-✔ Falta só contexto → isso muda TUDO
-✔ Com isso vira praticamente um ChatGPT via Alexa
-
+Pronto! 🎉
+Sua Alexa agora funciona como um assistente inteligente.
+:::
