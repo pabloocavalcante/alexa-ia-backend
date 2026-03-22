@@ -46,7 +46,10 @@ app.post("/alexa", async (req, res) => {
         else if (requestType === "IntentRequest") {
 
             // 🔥 CAPTURA REAL DA FALA (ESSENCIAL)
-            let pergunta = req.body.request?.inputTranscript;
+            let pergunta =
+                req.body.request?.intent?.slots?.pergunta?.value ||
+                req.body.request?.inputTranscript ||
+                null;
 
             // fallback (caso não venha inputTranscript)
             if (!pergunta) {
