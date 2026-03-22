@@ -7,7 +7,8 @@ const SESSION_TIMEOUT = 10 * 60 * 1000;
 const MAX_HISTORY = 10;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+//const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent';
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -16,7 +17,7 @@ app.get('/health', (req, res) => {
 app.post('/alexa', async (req, res) => {
   const body = req.body;
   console.log('REQUEST TYPE:', body?.request?.type);
-  console.log('INTENT NAME:', body?.request?.intent?.name);  // ← adiciona essa
+  console.log('INTENT NAME:', body?.request?.intent?.name);
   console.log('SLOTS:', JSON.stringify(body?.request?.intent?.slots));
 
   const alexaRequest = body?.request;
