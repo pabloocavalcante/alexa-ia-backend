@@ -43,7 +43,7 @@ app.post("/alexa", async (req, res) => {
         }
 
         // 💬 Conversa livre
-        else if (requestType === "IntentRequest") {
+        else if (requestType === "IntentRequest" || requestType === "SessionResumedRequest") {
 
             // 🔥 Captura robusta da fala
             let pergunta =
@@ -51,7 +51,6 @@ app.post("/alexa", async (req, res) => {
                 req.body.request?.inputTranscript ||
                 null;
 
-            // fallback extra
             if (!pergunta || intentName === "AMAZON.FallbackIntent") {
                 pergunta = req.body.request?.inputTranscript;
             }
@@ -62,7 +61,7 @@ app.post("/alexa", async (req, res) => {
                 textoResposta = "Pode falar, estou ouvindo.";
             } else {
 
-                // 🧠 Salva pergunta
+                // 🧠 Salva pergunta no histórico local
                 sessoes[userId].push({
                     role: "user",
                     text: pergunta
@@ -72,44 +71,26 @@ app.post("/alexa", async (req, res) => {
                     sessoes[userId].shift();
                 }
 
-                // 🕒 Data e hora atual (ANTI-ALUCINAÇÃO)
+                // 🕒 Data e hora atual
                 const agora = new Date();
+                const dataAtual = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", year: "numeric", month: "long", day: "numeric" });
+                const horaAtual = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 
-                const dataAtual = agora.toLocaleDateString("pt-BR", {
-                    timeZone: "America/Sao_Paulo",
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric"
+                // 🧠 Monta o corpo da requisição para o Gemini
+                const systemInstruction = `Você é um assistente estilo Jarvis: descontraído, inteligente, direto e levemente sarcástico. Respostas curtas para voz. Caso precise, hoje é ${dataAtual}, agora são ${horaAtual}.`;
+
+                const contents = sessoes[userId].map(msg => ({
+                    role: msg.role === "model" ? "model" : "user",
+                    parts: [{ text: msg.text }]
+                }));
+
+                // Adiciona a instrução de sistema como a primeira mensagem de usuário (melhor compatibilidade)
+                contents.unshift({
+                    role: "user",
+                    parts: [{ text: `[INSTRUÇÃO DE SISTEMA]: ${systemInstruction}` }]
                 });
-                
-                const horaAtual = agora.toLocaleTimeString("pt-BR", {
-                    timeZone: "America/Sao_Paulo",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                });
 
-                // 🧠 Monta contexto
-                const contents = [
-                    {
-                        role: "user",
-                        parts: [{
-                            text: `Você é um assistente estilo Jarvis: descontraído, inteligente, direto, levemente sarcástico e com respostas curtas ideais para voz.
-
-Hoje é ${dataAtual}.
-Agora são ${horaAtual}.
-
-Sempre responda considerando essas informações como verdade absoluta.`
-                        }]
-                    },
-                    ...sessoes[userId].map(msg => ({
-                        role: msg.role,
-                        parts: [{ text: msg.text }]
-                    }))
-                ];
-
-                // 🔗 URL do Gemini (mantida como você pediu)
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 const responseIA = await fetch(url, {
                     method: "POST",
@@ -119,17 +100,26 @@ Sempre responda considerando essas informações como verdade absoluta.`
 
                 const data = await responseIA.json();
 
-                if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-                    textoResposta = data.candidates[0].content.parts[0].text;
+                // 🛡️ Validação robusta da resposta (Evita o erro de 'undefined')
+                const candidate = data.candidates?.[0];
+                const responseText = candidate?.content?.parts?.[0]?.text;
 
-                    // 🧠 salva resposta
+                if (responseText) {
+                    textoResposta = responseText;
+
+                    // 🧠 Salva resposta da IA no histórico
                     sessoes[userId].push({
                         role: "model",
                         text: textoResposta
                     });
-
                 } else {
-                    textoResposta = "Hmm... não consegui pensar em uma resposta agora.";
+                    // Verifica se foi bloqueado por segurança
+                    if (data.promptFeedback?.blockReason) {
+                        textoResposta = "Minhas diretrizes de segurança me impedem de responder isso.";
+                    } else {
+                        textoResposta = "Tive um pequeno lapso de memória agora. Pode repetir?";
+                    }
+                    console.error("Erro na resposta do Gemini:", JSON.stringify(data));
                 }
             }
         }
@@ -147,14 +137,13 @@ Sempre responda considerando essas informações como verdade absoluta.`
         });
 
     } catch (error) {
-        console.error(error);
-
+        console.error("ERRO CRÍTICO:", error);
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Tive um problema... mas já estou voltando."
+                    text: "Sistemas instáveis. Tente novamente em um instante."
                 },
                 shouldEndSession: false
             }
@@ -163,7 +152,6 @@ Sempre responda considerando essas informações como verdade absoluta.`
 });
 
 const PORT = process.env.PORT || 10000;
-
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Servidor ativo na porta ${PORT}`);
 });
